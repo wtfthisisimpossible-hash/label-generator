@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>電腦標籤排佈工具</title>
+<style>
+:root{
+  --bg:#eef1ef;
+  --stage:#e1e7e4;
+  --panel:#ffffff;
+  --ink:#1d2327;
+  --muted:#667074;
+  --line:#dde2df;
+  --field:#f6f8f7;
+  --accent:#0f6e66;
+  --accent-2:#2f9a8d;
+  --accent-ink:#ffffff;
+  --accent-soft:#e6f3f1;
+  --accent-line:#c8e2de;
+  --danger:#b3261e;
+  --cell-line:#8fa8a4;
+  --r-card:20px;
+  --r-ctl:10px;
+  --shadow:0 1px 2px rgba(20,40,35,.04),0 8px 22px rgba(20,40,35,.06);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  font-family:"Inter","Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  color:var(--ink);background:var(--bg);font-size:14px;line-height:1.5;
+  display:flex;flex-direction:column;
+}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* 頂端列 */
+header{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:10px 24px;background:var(--panel);border-bottom:1px solid var(--line);
+}
+.logo{
+  width:34px;height:34px;border-radius:10px;flex:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 10px rgba(15,110,102,.28);
+}
+header h1{font-size:16px;margin:0;font-weight:700;color:var(--accent);letter-spacing:.02em}
+.spec{display:flex;align-items:center;gap:8px;color:var(--muted);margin-left:10px}
+select,.num,.qty input{
+  padding:6px 10px;border:1px solid var(--line);border-radius:var(--r-ctl);background:var(--field);color:var(--ink);
+}
+.spacer{flex:1}
+
+/* 按鈕 */
+.btn{
+  padding:7px 14px;border:1px solid var(--accent-line);border-radius:var(--r-ctl);
+  background:var(--accent-soft);color:var(--accent);font-weight:500;
+  transition:background .12s,border-color .12s,filter .12s;
+}
+.btn:hover{background:#d9ece8;border-color:#b3d6d0}
+.btn.primary{
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:var(--accent-ink);
+  border-radius:999px;padding:8px 22px;font-weight:600;box-shadow:0 6px 16px rgba(15,110,102,.28);
+}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{background:#fbeeed;border-color:#f0cfcc;color:var(--danger)}
+.btn.danger:hover{background:#f7e0de}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+
+/* 版面 */
+main{
+  flex:1;min-height:0;display:grid;grid-template-columns:360px 1fr;gap:16px;padding:16px 24px 20px;
+}
+aside{display:flex;flex-direction:column;gap:14px;min-height:0}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--shadow);
+}
+
+/* 左欄橫幅 */
+.banner{
+  position:relative;overflow:hidden;flex:none;color:#fff;
+  padding:16px 20px;border-radius:var(--r-card);
+  background:linear-gradient(135deg,#0f6e66 0%,#2f9a8d 60%,#6cc0b4 100%);
+  box-shadow:0 8px 22px rgba(15,110,102,.25);
+}
+.banner::before,.banner::after{
+  content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.13);pointer-events:none;
+}
+.banner::before{width:120px;height:120px;right:-24px;top:-44px}
+.banner::after{width:64px;height:64px;right:54px;bottom:-30px}
+.banner .eyebrow{font-size:11px;letter-spacing:.14em;font-weight:600;opacity:.85}
+.banner h2{margin:2px 0 2px;font-size:19px;font-weight:700;letter-spacing:.02em}
+.banner p{margin:0;font-size:12px;opacity:.9}
+
+/* 區塊標題（左側色條） */
+.sec-title,.panel-title,.bar-title{
+  display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);
+}
+.sec-title::before,.panel-title::before,.bar-title::before{
+  content:"";width:4px;height:16px;border-radius:2px;flex:none;
+  background:linear-gradient(var(--accent),var(--accent-2));
+}
+.panel-title small{margin-left:auto;color:var(--muted);font-weight:400}
+
+.card-upload{flex:none;padding:14px 16px 16px}
+.card-upload .sec-title{margin-bottom:10px}
+.drop{
+  padding:16px 12px;border:1.5px dashed #aebfbb;border-radius:14px;
+  text-align:center;color:var(--muted);background:var(--field);cursor:pointer;
+  transition:background .12s,border-color .12s;
+}
+.drop:hover,.drop.over{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.drop strong{display:block;color:var(--ink);font-weight:600;margin-bottom:2px}
+.drop.over strong,.drop:hover strong{color:var(--accent)}
+
+.card-list{flex:1;min-height:0;display:flex;flex-direction:column;padding-top:14px}
+.card-list .panel-title{padding:0 16px 10px}
+#list{flex:1;min-height:0;overflow:auto;padding:0 14px 14px;display:flex;flex-direction:column;gap:8px}
+.empty{color:var(--muted);padding:6px 2px}
+.item{
+  display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;
+  padding:8px;border:1px solid var(--line);border-radius:14px;background:#fff;cursor:pointer;
+  transition:border-color .12s,background .12s;
+}
+.item:hover{border-color:#b4c4c0}
+.item.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:#f6fbfa}
+.thumb{
+  width:64px;height:44px;border-radius:8px;overflow:hidden;
+  background:conic-gradient(#e7ebea 25%,#fff 0 50%,#e7ebea 0 75%,#fff 0) 0 0/10px 10px;
+  display:flex;align-items:center;justify-content:center;
+}
+.thumb img{max-width:100%;max-height:100%;display:block;pointer-events:none}
+.meta{min-width:0}
+.meta .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.meta .sub{color:var(--muted);font-size:12px}
+.qty{display:flex;align-items:center;gap:4px;margin-top:2px;font-size:12px;color:var(--muted)}
+.qty input{width:58px;padding:2px 6px;border-radius:8px}
+.del{
+  border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:4px 8px;border-radius:8px;
+}
+.del:hover{background:#fbeceb;color:var(--danger)}
+
+.tools{flex:none;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.tools .row{display:flex;gap:8px}
+.tools .row .btn{flex:1}
+.hint{color:var(--muted);font-size:12px;line-height:1.6}
+.help summary{
+  cursor:pointer;color:var(--muted);font-size:12px;font-weight:500;list-style:none;
+  display:flex;align-items:center;gap:6px;user-select:none;
+}
+.help summary::-webkit-details-marker{display:none}
+.help summary::before{
+  content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+  transform:rotate(-45deg);transition:transform .15s;
+}
+.help[open] summary::before{transform:rotate(45deg)}
+.help summary:hover{color:var(--accent)}
+.help .hint{margin-top:6px}
+
+/* 右欄 */
+.stage-wrap{display:flex;flex-direction:column;gap:14px;min-width:0;min-height:0}
+.bar{
+  flex:none;display:flex;align-items:center;gap:12px 20px;flex-wrap:wrap;
+  padding:10px 18px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--shadow);
+}
+.bar-title{flex:none;width:70px}
+.bar label{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.bar input[type=range]{width:120px;accent-color:var(--accent)}
+.bar input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+.count{font-weight:600;color:var(--accent)}
+.seg{display:flex;align-items:center;gap:6px;color:var(--muted)}
+.seg .group{display:inline-flex;border:1px solid var(--accent-line);border-radius:var(--r-ctl);overflow:hidden;background:#fff}
+.seg .group button{border:0;background:#fff;padding:5px 14px;border-right:1px solid var(--accent-line);color:var(--ink)}
+.seg .group button:last-child{border-right:0}
+.seg .group button:hover:not(:disabled){background:var(--accent-soft)}
+.seg .group button.on{background:var(--accent);color:var(--accent-ink)}
+.seg .group button:disabled{opacity:.4;cursor:not-allowed}
+.seg input[type=range]{width:110px}
+.seg .num{width:62px;padding:3px 6px}
+.seg .info{min-width:6em;font-size:12px}
+
+#stage{
+  flex:1;min-height:0;overflow:auto;padding:24px;display:flex;
+  background:var(--stage);border:1px solid var(--line);border-radius:var(--r-card);
+}
+#sheet{
+  --mm:3px;
+  position:relative;flex:none;margin:auto;
+  width:calc(var(--mm)*210);height:calc(var(--mm)*297);
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.16),0 10px 30px rgba(20,40,35,.16);
+}
+.cell{position:absolute;overflow:hidden}
+.grid .cell{outline:1px solid var(--cell-line);outline-offset:-.5px}
+.cell:hover{background:rgba(15,110,102,.08)}
+.cell.drag-over{background:rgba(15,110,102,.22)}
+.cell img{width:100%;height:100%;display:block;pointer-events:none}
+.fit-contain .cell img{object-fit:contain}
+.fit-cover .cell img{object-fit:cover}
+.cell.sel{background:rgba(15,110,102,.14);box-shadow:inset 0 0 0 2px var(--accent)}
+.cell .x{
+  position:absolute;top:2px;right:2px;width:18px;height:18px;border:0;border-radius:50%;
+  background:rgba(29,35,39,.78);color:#fff;font-size:13px;line-height:18px;padding:0;
+  display:none;
+}
+.cell.filled:hover .x{display:block}
+.cell .no{position:absolute;left:3px;top:1px;font-size:10px;color:#a9b6b3;pointer-events:none}
+.cell.filled .no{display:none}
+.hide-no .cell .no{display:none}
+/* 編號設定（貼紙清單內） */
+.numbox{grid-column:1 / -1;border-top:1px dashed var(--line);padding-top:6px;margin-top:2px}
+.numbox .chk{display:flex;align-items:center;gap:6px;color:var(--ink);font-weight:500;cursor:pointer;width:max-content}
+.numbox .chk input{accent-color:var(--accent);width:15px;height:15px}
+.numset{display:none;grid-template-columns:1fr 1fr;gap:6px 10px;margin-top:8px}
+.numbox.on .numset{display:grid}
+.numset label{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.numset label.wide{grid-column:1 / -1}
+.numset input,.numset select{min-width:0;padding:2px 6px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--ink);font-size:12px}
+.numset input{width:60px}
+.numset select{flex:1;padding:3px 6px}
+.numset i{font-style:normal}
+/* 格子上的編號 */
+.cell .seq{position:absolute;line-height:1;white-space:nowrap;color:#000;pointer-events:none;z-index:1}
+#printHost{display:none}
+#marquee{position:fixed;z-index:9;border:1px solid var(--accent);background:rgba(15,110,102,.12);pointer-events:none;display:none}
+.toast{
+  position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+  background:var(--ink);color:#fff;padding:8px 16px;border-radius:999px;font-size:13px;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;
+}
+.toast.show{opacity:1}
+
+@media (max-width:900px){
+  body{height:auto}
+  main{grid-template-columns:1fr;padding:12px}
+  .card-list{flex:none}
+  #list{max-height:260px}
+  #stage{padding:12px;min-height:60vh}
+}
+
+@media print{
+  @page{size:A4 portrait;margin:0}
+  html,body{height:auto;margin:0;padding:0;background:#fff;display:block}
+  /* 列印時只留下 #printHost；畫面上的所有介面（含窄螢幕規則留下的空白）都整個移除，避免把內容擠到第二頁 */
+  header,main,.toast,#marquee{display:none !important}
+  #printHost{display:block !important;width:210mm;height:296.8mm;overflow:hidden;page-break-after:avoid}
+  #printHost canvas{display:block;width:210mm;height:297mm}
+  .cell{outline:none !important;background:none !important}
+  .cell.sel{box-shadow:none !important}
+  .cell .x,.cell .no{display:none !important}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round">
+      <rect x="2" y="2" width="14" height="14" rx="2.5"/><path d="M2 7h14M2 12h14M9 2v14" stroke-opacity=".85"/>
+    </svg>
+  </span>
+  <h1>電腦標籤排佈工具</h1>
+  <div class="spec">
+    <label for="specSel">標籤規格</label>
+    <select id="specSel"></select>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn primary" id="btnPrint" title="A4 直式，600dpi">列印（A4 直式・600dpi）</button>
+</header>
+
+<main>
+  <aside>
+    <div class="banner">
+      <div class="eyebrow">LABEL LAYOUT</div>
+      <h2>電腦標籤自動排佈</h2>
+      <p>上傳貼紙，依鶴屋 A4 規格排進格子</p>
+    </div>
+
+    <div class="card card-upload">
+      <div class="sec-title">上傳貼紙</div>
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="上傳貼紙圖片">
+        <strong>上傳貼紙圖片</strong>
+        點擊選擇，或把檔案拖曳到這裡（可複選）
+      </div>
+      <input type="file" id="file" accept="image/*" multiple hidden>
+    </div>
+
+    <div class="card card-list">
+      <div class="panel-title">貼紙清單 <small id="listCount">0 張</small></div>
+      <div id="list"></div>
+    </div>
+
+    <div class="card tools">
+      <details class="help">
+        <summary>操作說明</summary>
+        <div class="hint">選取一張貼紙後，點擊右側空格即可貼上；也可以直接把貼紙拖曳到格子。點擊已貼的格子可選取（Ctrl 逐一加選，Shift 連選兩次點擊之間的格子，或在畫布外空白處框選），再用上方「對齊」和「貼紙大小」調整。每張貼紙可勾選「加上編號」，依畫布上的格號順序編號，起始編號可自行設定。調整「貼上數量」會即時在畫布增減該貼紙：增加時從該貼紙已貼的第一格開始往後依序填入空格，減少時從最後一格開始移除。</div>
+      </details>
+      <div class="row">
+        <button class="btn" id="btnFillSel" disabled>選取的貼紙填滿空格</button>
+      </div>
+      <div class="row">
+        <button class="btn danger" id="btnClear" disabled>清空畫布</button>
+      </div>
+    </div>
+  </aside>
+
+  <section class="stage-wrap">
+    <div class="bar">
+      <span class="bar-title">貼紙</span>
+      <span class="count" id="count">已貼 0 / 48 格</span>
+      <label>填入方式
+        <select id="fitSel">
+          <option value="contain">完整顯示</option>
+          <option value="cover">填滿並裁切</option>
+        </select>
+      </label>
+      <span class="seg" id="alignSeg">對齊
+        <span class="group">
+          <button type="button" data-a="left">靠左</button>
+          <button type="button" data-a="center">置中</button>
+          <button type="button" data-a="right">靠右</button>
+        </span>
+        <button class="btn" id="btnSelAll" type="button" style="padding:3px 10px">全選</button>
+        <span class="info" id="selInfo"></span>
+      </span>
+      <span class="seg" id="scaleSeg">貼紙大小
+        <input type="range" id="scaleRange" min="10" max="200" step="5" value="100" title="等比例縮放；超過 100% 的部分會被格子裁切">
+        <input type="number" id="scaleNum" min="10" max="200" step="5" value="100" class="num"> %
+        <button class="btn" id="btnScaleReset" type="button" style="padding:3px 10px">還原</button>
+      </span>
+    </div>
+    <div class="bar bar-view">
+      <span class="bar-title">畫布</span>
+      <label><input type="checkbox" id="chkGrid" checked> 顯示格線</label>
+      <label><input type="checkbox" id="chkNo" checked> 顯示格號</label>
+      <label>畫布縮放
+        <input type="range" id="zoom" min="1" max="10" step="0.05" value="3" title="也可以在畫布上滾動滑鼠滾輪縮放；放大後按住右鍵拖曳可移動畫布">
+      </label>
+      <button class="btn" id="btnFit">符合視窗</button>
+    </div>
+    <div id="stage"><div id="sheet" class="grid fit-contain"></div></div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+<div id="marquee"></div>
+<div id="printHost"></div>
+
+<script>
+/* ===== 規格資料（之後新增規格，只要在這裡加一筆） ===== */
+const PAGE = { w:210, h:297 };               // A4, mm
+const SPECS = {
+  '48': {
+    label:'48格（52.5×24.7mm）NO.B2553 / BC2553',
+    cols:4, rows:12,
+    cellW:52.5, cellH:24.7,
+    offsetX:0, offsetY:0                     // 從左上角開始
+  },
+  // 欄數 = (210 − 左右邊距×2) ÷ 貼紙寬；列數 = (297 − 上下邊距×2) ÷ 貼紙高
+  '144': {
+    label:'144格（32×12mm）NO.L1232 / B1232',
+    cols:6, rows:24,
+    cellW:32, cellH:12,
+    offsetX:9, offsetY:4.5                   // 左右邊距 9mm、上下邊距 4.5mm
+  },
+  '196': {
+    label:'196格（28×10mm）NO.L1028 / B1028',
+    cols:7, rows:28,
+    cellW:28, cellH:10,
+    offsetX:7, offsetY:8.5                   // 左右邊距 7mm、上下邊距 8.5mm
+  },
+  '203': {
+    label:'203格（30×10mm）NO.L1030 / B1030',
+    cols:7, rows:29,
+    cellW:30, cellH:10,
+    offsetX:0, offsetY:3.5                   // 左右無邊距、上下邊距 3.5mm
+  }
+};
+
+/* ===== 狀態 ===== */
+let specKey = '48';
+let images = [];            // {id,name,url,img,w,h,qty}
+let cells = [];             // 每格存 image id 或 null
+let aligns = [];            // 每格水平對齊：left / center / right（僅「完整顯示」有效）
+let scales = [];            // 每格貼紙大小（%，100 = 剛好放進格子，等比例）
+let selCells = new Set();   // 已選取的格子
+let anchorIdx = null;       // Shift 範圍選取的起點（上一次點擊的格子）
+let selectedId = null;
+let uid = 1;
+
+const $ = id => document.getElementById(id);
+const sheet = $('sheet');
+
+const PX = 25.4 / 96;   // 1 px（96dpi）= 0.2646 mm；編號的大小與邊距以此換算，與畫布縮放、列印無關
+const FONTS = [
+  { k:'jh',    label:'微軟正黑體', css:'"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif' },
+  { k:'noto',  label:'思源黑體',   css:'"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif' },
+  { k:'ming',  label:'新細明體',   css:'"PMingLiU","MingLiU","Songti TC",serif' },
+  { k:'kai',   label:'標楷體',     css:'"DFKai-SB","BiauKai","Kaiti TC",serif' },
+  { k:'arial', label:'Arial',      css:'Arial,Helvetica,sans-serif' },
+  { k:'times', label:'Times New Roman', css:'"Times New Roman",Times,serif' },
+  { k:'mono',  label:'Consolas／等寬', css:'Consolas,"Courier New",monospace' }
+];
+function fontOf(k){ return FONTS.find(f => f.k === k) || FONTS[0]; }
+function seqText(it, n){ return String(n + it.num.start - 1).padStart(it.num.digits, '0'); }   // n：此貼紙在畫布上的第幾個（從 1 起算）
+
+function spec(){ return SPECS[specKey]; }
+function total(){ return spec().cols * spec().rows; }
+function findImg(id){ return images.find(i => i.id === id); }
+
+/* ===== 提示 ===== */
+let toastTimer;
+function toast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ===== 上傳 ===== */
+function addFiles(fileList){
+  const files = [...fileList].filter(f => f.type.startsWith('image/'));
+  if(!files.length){ toast('請選擇圖片檔案'); return; }
+  let pending = files.length;
+  files.forEach(f => {
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      const item = { id:'i'+(uid++), name:f.name, url, img, w:img.naturalWidth, h:img.naturalHeight,
+        num:{ on:false, start:1, digits:2, font:'jh', size:15, top:19, right:21 } };
+      images.push(item);
+      if(!selectedId) selectedId = item.id;
+      if(--pending === 0){ renderList(); toast('已加入 ' + files.length + ' 張貼紙'); }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      if(--pending === 0) renderList();
+      toast('無法讀取：' + f.name);
+    };
+    img.src = url;
+  });
+}
+
+const drop = $('drop'), fileInput = $('file');
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fileInput.click(); } });
+fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => {
+  if([...(e.dataTransfer.types||[])].includes('Files')){ e.preventDefault(); drop.classList.add('over'); }
+}));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove('over')));
+drop.addEventListener('drop', e => {
+  if(e.dataTransfer.files && e.dataTransfer.files.length){ e.preventDefault(); addFiles(e.dataTransfer.files); }
+});
+// 避免拖檔案到頁面其他地方時瀏覽器直接開啟圖片
+window.addEventListener('dragover', e => { if([...(e.dataTransfer.types||[])].includes('Files')) e.preventDefault(); });
+window.addEventListener('drop', e => { if(e.dataTransfer.files && e.dataTransfer.files.length && !drop.contains(e.target)){ e.preventDefault(); addFiles(e.dataTransfer.files); } });
+
+/* ===== 貼紙清單 ===== */
+function renderList(){
+  const list = $('list');
+  $('listCount').textContent = images.length + ' 張';
+  if(!images.length){
+    list.innerHTML = '<div class="empty">尚未上傳貼紙。</div>';
+  } else {
+    list.innerHTML = '';
+    images.forEach(it => {
+      const el = document.createElement('div');
+      el.className = 'item' + (it.id === selectedId ? ' sel' : '');
+      el.draggable = true;
+      el.dataset.id = it.id;
+      el.innerHTML =
+        '<div class="thumb"><img alt=""></div>' +
+        '<div class="meta"><div class="name"></div><div class="sub">' + it.w + ' × ' + it.h + ' px</div>' +
+        '<label class="qty">貼上數量 <input type="number" min="0" max="999" step="1"></label></div>' +
+        '<button class="del" title="移除這張貼紙" aria-label="移除">×</button>';
+      el.querySelector('img').src = it.url;
+      el.querySelector('.name').textContent = it.name;
+      el.querySelector('.name').title = it.name;
+      const q = el.querySelector('input');
+      q.dataset.id = it.id;
+      q.value = countOf(it.id);
+      q.addEventListener('click', e => e.stopPropagation());
+      q.addEventListener('keydown', e => e.stopPropagation());
+      q.addEventListener('input', () => {
+        if(q.value === '') return;                       // 輸入中途先不處理
+        const n = Math.max(0, parseInt(q.value, 10) || 0);
+        const actual = setCount(it.id, n);
+        if(actual !== n){ q.value = actual; toast('空格不足，最多只能再貼到 ' + actual + ' 張'); }
+      });
+      q.addEventListener('blur', () => { q.value = countOf(it.id); });
+      el.querySelector('.del').addEventListener('click', e => { e.stopPropagation(); removeImage(it.id); });
+      el.appendChild(buildNumBox(it, el));
+      el.addEventListener('click', () => { selectedId = (selectedId === it.id ? null : it.id); renderList(); });
+      el.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', 'img:' + it.id);
+        e.dataTransfer.effectAllowed = 'copy';
+      });
+      list.appendChild(el);
+    });
+  }
+  updateButtons();
+}
+
+/* 每張貼紙的編號設定：依該貼紙在畫布上的格號順序，由 1 起編 */
+function buildNumBox(it, item){
+  const n = it.num;
+  const box = document.createElement('div');
+  box.className = 'numbox' + (n.on ? ' on' : '');
+  box.innerHTML =
+    '<label class="chk"><input type="checkbox" class="numon"> 加上編號</label>' +
+    '<div class="numset">' +
+      '<label>起始編號<input type="number" class="nst" min="0" max="999999" step="1"></label>' +
+      '<label>位數<input type="number" class="nd" min="1" max="8" step="1"></label>' +
+      '<label class="wide">字型<select class="nf"></select></label>' +
+      '<label>大小<input type="number" class="ns" min="4" max="200" step="1"><i>px</i></label>' +
+      '<label>上邊距<input type="number" class="nt" min="0" max="500" step="1"><i>px</i></label>' +
+      '<label>右邊距<input type="number" class="nr" min="0" max="500" step="1"><i>px</i></label>' +
+    '</div>';
+  const on = box.querySelector('.numon'), nst = box.querySelector('.nst'), nd = box.querySelector('.nd'), ns = box.querySelector('.ns'),
+        nf = box.querySelector('.nf'), nt = box.querySelector('.nt'), nr = box.querySelector('.nr');
+  FONTS.forEach(f => { const o = document.createElement('option'); o.value = f.k; o.textContent = f.label; nf.appendChild(o); });
+  on.checked = n.on; nst.value = n.start; nd.value = n.digits; ns.value = n.size; nf.value = n.font; nt.value = n.top; nr.value = n.right;
+
+  on.addEventListener('change', () => { n.on = on.checked; box.classList.toggle('on', n.on); renderCells(); });
+  const bindNum = (inp, key, lo, hi) => inp.addEventListener('input', () => {
+    if(inp.value === '' || isNaN(+inp.value)) return;
+    n[key] = Math.max(lo, Math.min(hi, Math.round(+inp.value)));
+    renderCells();
+  });
+  bindNum(nst, 'start', 0, 999999); bindNum(nd, 'digits', 1, 8); bindNum(ns, 'size', 4, 200); bindNum(nt, 'top', 0, 500); bindNum(nr, 'right', 0, 500);
+  [[nst,'start'],[nd,'digits'],[ns,'size'],[nt,'top'],[nr,'right']].forEach(([inp, key]) => inp.addEventListener('blur', () => { inp.value = n[key]; }));
+  nf.addEventListener('change', () => { n.font = nf.value; renderCells(); });
+
+  // 在設定區操作時，不要觸發清單項目的選取與拖曳
+  box.addEventListener('click', e => e.stopPropagation());
+  box.addEventListener('keydown', e => e.stopPropagation());
+  box.addEventListener('mousedown', () => {
+    item.draggable = false;
+    const up = () => { item.draggable = true; window.removeEventListener('mouseup', up); };
+    window.addEventListener('mouseup', up);
+  });
+  return box;
+}
+
+function countOf(id){ return cells.reduce((n, c) => n + (c === id ? 1 : 0), 0); }
+
+/* 把某張貼紙在畫布上的數量調整為 n；回傳實際數量 */
+function setCount(id, n){
+  let cur = countOf(id);
+  if(n > cur){
+    // 從這張貼紙已貼的第一格開始往後補；後面空格不夠時，再回頭補前面的空格。還沒貼過就從第 1 格起
+    const anchor = Math.max(0, cells.indexOf(id));
+    for(let k = 1; k <= cells.length && cur < n; k++){
+      const i = (anchor + k) % cells.length;
+      if(!cells[i]){ cells[i] = id; cur++; }
+    }
+  } else if(n < cur){
+    for(let i = cells.length - 1; i >= 0 && cur > n; i--){
+      if(cells[i] === id){ cells[i] = null; cur--; }
+    }
+  }
+  renderCells();
+  return cur;
+}
+
+/* 畫布變動後，同步清單上的數量（正在輸入的欄位不覆寫） */
+function syncQty(){
+  document.querySelectorAll('#list .qty input').forEach(q => {
+    if(document.activeElement !== q) q.value = countOf(q.dataset.id);
+  });
+}
+
+function removeImage(id){
+  const it = findImg(id); if(!it) return;
+  URL.revokeObjectURL(it.url);
+  images = images.filter(i => i.id !== id);
+  cells = cells.map(c => c === id ? null : c);
+  if(selectedId === id) selectedId = images.length ? images[0].id : null;
+  renderList(); renderCells();
+}
+
+function updateButtons(){
+  const filled = cells.filter(Boolean).length;
+  $('btnFillSel').disabled = !selectedId;
+  $('btnClear').disabled = filled === 0;
+}
+
+/* ===== 畫布 ===== */
+function buildSheet(){
+  const s = spec();
+  sheet.innerHTML = '';
+  cells = new Array(total()).fill(null);
+  aligns = new Array(total()).fill('center');
+  scales = new Array(total()).fill(100);
+  selCells.clear();
+  anchorIdx = null;
+  for(let r = 0; r < s.rows; r++){
+    for(let c = 0; c < s.cols; c++){
+      const idx = r * s.cols + c;
+      const el = document.createElement('div');
+      el.className = 'cell';
+      el.dataset.i = idx;
+      el.style.left   = 'calc(var(--mm) * ' + (s.offsetX + c * s.cellW) + ')';
+      el.style.top    = 'calc(var(--mm) * ' + (s.offsetY + r * s.cellH) + ')';
+      el.style.width  = 'calc(var(--mm) * ' + s.cellW + ')';
+      el.style.height = 'calc(var(--mm) * ' + s.cellH + ')';
+      el.addEventListener('click', e => onCellClick(idx, e));
+      el.addEventListener('dragstart', e => {
+        if(!cells[idx]){ e.preventDefault(); return; }
+        e.dataTransfer.setData('text/plain', 'cell:' + idx);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+      el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+      el.addEventListener('drop', e => {
+        e.preventDefault(); el.classList.remove('drag-over');
+        const d = e.dataTransfer.getData('text/plain') || '';
+        if(d.startsWith('img:')){ cells[idx] = d.slice(4); }
+        else if(d.startsWith('cell:')){
+          const from = parseInt(d.slice(5), 10);
+          if(!isNaN(from) && from !== idx){
+            const t = cells[idx]; cells[idx] = cells[from]; cells[from] = t;
+            const a = aligns[idx]; aligns[idx] = aligns[from]; aligns[from] = a;
+            const sc = scales[idx]; scales[idx] = scales[from]; scales[from] = sc;
+            selCells.clear();
+          }
+        }
+        renderCells();
+      });
+      sheet.appendChild(el);
+    }
+  }
+  renderCells();
+}
+
+/* 完整顯示：依格子尺寸（mm）、貼紙比例、大小與對齊算出圖片位置；其他模式維持 100% 填格 */
+function layoutImg(img, it, idx){
+  if($('fitSel').value !== 'contain'){ img.style.objectPosition = 'center center'; return; }
+  const sp = spec();
+  const k = Math.min(sp.cellW / it.w, sp.cellH / it.h) * scales[idx] / 100;
+  const w = it.w * k, h = it.h * k, a = aligns[idx];
+  const left = a === 'left' ? 0 : a === 'right' ? sp.cellW - w : (sp.cellW - w) / 2;
+  const top = (sp.cellH - h) / 2;
+  img.style.position = 'absolute';
+  img.style.width  = 'calc(var(--mm) * ' + w + ')';
+  img.style.height = 'calc(var(--mm) * ' + h + ')';
+  img.style.left   = 'calc(var(--mm) * ' + left + ')';
+  img.style.top    = 'calc(var(--mm) * ' + top + ')';
+}
+
+function makeSeq(it, n){
+  const f = fontOf(it.num.font), sp = document.createElement('span');
+  sp.className = 'seq';
+  sp.textContent = seqText(it, n);
+  sp.style.fontFamily = f.css;
+  sp.style.fontSize = 'calc(var(--mm) * ' + (it.num.size * PX) + ')';
+  sp.style.top      = 'calc(var(--mm) * ' + (it.num.top * PX) + ')';
+  sp.style.right    = 'calc(var(--mm) * ' + (it.num.right * PX) + ')';
+  return sp;
+}
+
+function renderCells(){
+  const counter = {};
+  const seqs = cells.map(c => c ? (counter[c] = (counter[c] || 0) + 1) : 0);
+  [...sheet.children].forEach((el, idx) => {
+    const id = cells[idx];
+    const it = id && findImg(id);
+    if(it){
+      el.className = 'cell filled' + (selCells.has(idx) ? ' sel' : '');
+      el.draggable = true;
+      el.innerHTML = '<img alt="">';
+      el.firstChild.src = it.url;
+      layoutImg(el.firstChild, it, idx);
+      if(it.num && it.num.on) el.appendChild(makeSeq(it, seqs[idx]));
+      const x = document.createElement('button');
+      x.className = 'x'; x.textContent = '×'; x.title = '清除這一格'; x.setAttribute('aria-label','清除這一格');
+      x.addEventListener('click', e => { e.stopPropagation(); cells[idx] = null; renderCells(); });
+      el.appendChild(x);
+    } else {
+      cells[idx] = null;
+      aligns[idx] = 'center';
+      scales[idx] = 100;
+      selCells.delete(idx);
+      el.className = 'cell';
+      el.draggable = false;
+      el.innerHTML = '<span class="no">' + (idx + 1) + '</span>';
+    }
+  });
+  const filled = cells.filter(Boolean).length;
+  $('count').textContent = '已貼 ' + filled + ' / ' + total() + ' 格';
+  updateButtons();
+  syncQty();
+  updateAlignUI();
+}
+
+function onCellClick(idx, e){
+  if(cells[idx]){                                   // 已貼的格子：選取
+    const multi = e && (e.ctrlKey || e.metaKey);
+    if(e && e.shiftKey && anchorIdx !== null && cells[anchorIdx]){
+      // Shift：選取起點到這一格之間（依格號順序）所有已貼的格子
+      const lo = Math.min(anchorIdx, idx), hi = Math.max(anchorIdx, idx);
+      const next = multi ? new Set(selCells) : new Set();
+      for(let i = lo; i <= hi; i++) if(cells[i]) next.add(i);
+      selCells = next;                               // 起點不變，可繼續 Shift 調整範圍
+    } else if(multi){
+      selCells.has(idx) ? selCells.delete(idx) : selCells.add(idx);
+      anchorIdx = idx;
+    } else if(selCells.size === 1 && selCells.has(idx)){
+      selCells.clear();
+      anchorIdx = null;
+    } else {
+      selCells = new Set([idx]);
+      anchorIdx = idx;
+    }
+    renderCells();
+    return;
+  }
+  if(!selectedId){ toast('請先在左側選取一張貼紙'); return; }
+  cells[idx] = selectedId;                          // 空格：貼上選取的貼紙
+  renderCells();
+}
+
+/* ===== 對齊 ===== */
+function updateAlignUI(){
+  const contain = $('fitSel').value === 'contain';
+  const n = selCells.size;
+  const btns = document.querySelectorAll('#alignSeg .group button');
+  const set = new Set([...selCells].map(i => aligns[i]));
+  btns.forEach(b => {
+    b.disabled = !contain || n === 0;
+    b.classList.toggle('on', contain && set.size === 1 && set.has(b.dataset.a));
+    b.title = contain ? '' : '只有「完整顯示」可以調整對齊';
+  });
+  $('btnSelAll').disabled = !cells.some(Boolean);
+  $('selInfo').textContent = n ? '已選 ' + n + ' 格' + (contain ? '' : '（僅完整顯示可調整）') : '';
+  const sv = new Set([...selCells].map(i => scales[i]));
+  const can = contain && n > 0;
+  ['scaleRange','scaleNum','btnScaleReset'].forEach(id => { $(id).disabled = !can; });
+  $('scaleRange').value = sv.size === 1 ? [...sv][0] : 100;
+  if(document.activeElement !== $('scaleNum')){
+    $('scaleNum').value = sv.size === 1 ? [...sv][0] : '';
+    $('scaleNum').placeholder = sv.size > 1 ? '混合' : '';
+  }
+}
+document.querySelectorAll('#alignSeg .group button').forEach(b => b.addEventListener('click', () => {
+  selCells.forEach(i => { aligns[i] = b.dataset.a; });
+  renderCells();
+}));
+function applyScale(v){
+  v = Math.max(10, Math.min(200, Math.round(v)));
+  selCells.forEach(i => { scales[i] = v; });
+  renderCells();
+}
+$('scaleRange').addEventListener('input', e => applyScale(+e.target.value));
+$('scaleNum').addEventListener('input', e => { if(e.target.value !== '' && !isNaN(+e.target.value)) applyScale(+e.target.value); });
+$('scaleNum').addEventListener('blur', updateAlignUI);
+$('btnScaleReset').addEventListener('click', () => applyScale(100));
+$('btnSelAll').addEventListener('click', () => {
+  selCells = new Set(cells.map((c, i) => c ? i : -1).filter(i => i >= 0));
+  renderCells();
+});
+
+/* 在畫布外的空白處拖曳框選 */
+(function(){
+  const stage = $('stage'), mq = $('marquee');
+  let sx, sy, moved = false, additive = false, on = false;
+  stage.addEventListener('mousedown', e => {
+    if(e.button !== 0 || e.target !== stage) return;
+    on = true; moved = false; additive = e.ctrlKey || e.metaKey;
+    sx = e.clientX; sy = e.clientY; e.preventDefault();
+  });
+  window.addEventListener('mousemove', e => {
+    if(!on) return;
+    if(!moved && Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 4) return;
+    moved = true;
+    const x = Math.min(sx, e.clientX), y = Math.min(sy, e.clientY);
+    Object.assign(mq.style, { display:'block', left:x+'px', top:y+'px', width:Math.abs(e.clientX - sx)+'px', height:Math.abs(e.clientY - sy)+'px' });
+  });
+  window.addEventListener('mouseup', e => {
+    if(!on) return;
+    on = false; mq.style.display = 'none';
+    if(!moved){ if(!additive && selCells.size){ selCells.clear(); renderCells(); } return; }
+    const x1 = Math.min(sx, e.clientX), x2 = Math.max(sx, e.clientX);
+    const y1 = Math.min(sy, e.clientY), y2 = Math.max(sy, e.clientY);
+    const next = additive ? new Set(selCells) : new Set();
+    [...sheet.children].forEach((el, i) => {
+      if(!cells[i]) return;
+      const r = el.getBoundingClientRect();
+      if(r.right > x1 && r.left < x2 && r.bottom > y1 && r.top < y2) next.add(i);
+    });
+    selCells = next; renderCells();
+  });
+})();
+
+/* ===== 自動排佈 ===== */
+$('btnFillSel').addEventListener('click', () => {
+  if(!selectedId) return;
+  let n = 0;
+  cells = cells.map(c => { if(!c){ n++; return selectedId; } return c; });
+  renderCells();
+  toast(n ? '已填入 ' + n + ' 格' : '沒有空格可填');
+});
+
+$('btnClear').addEventListener('click', () => {
+  if(!confirm('確定要清空整張畫布嗎？')) return;
+  cells = new Array(total()).fill(null);
+  renderCells();
+});
+
+/* ===== 檢視控制 ===== */
+const MM_MIN = 1, MM_MAX = 10;
+function clampMm(v){ return Math.min(MM_MAX, Math.max(MM_MIN, v)); }
+function curMm(){ return parseFloat(sheet.style.getPropertyValue('--mm')) || 3; }
+function setMm(v){ v = clampMm(v); sheet.style.setProperty('--mm', v + 'px'); $('zoom').value = v; }
+function fitView(){
+  const st = $('stage');
+  const cs = getComputedStyle(st);
+  const w = st.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const h = st.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const narrow = window.matchMedia('(max-width:820px)').matches;
+  const v = narrow ? w / PAGE.w : Math.min(w / PAGE.w, h / PAGE.h);
+  setMm(v);
+}
+$('zoom').addEventListener('input', e => setMm(parseFloat(e.target.value)));
+
+/* 滑鼠滾輪縮放（以游標位置為中心）；Shift＋滾輪保留原本的橫向捲動；右鍵（或中鍵）拖曳可平移 */
+$('stage').addEventListener('wheel', e => {
+  if(e.shiftKey) return;
+  e.preventDefault();
+  const stage = $('stage');
+  const unit = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1;
+  const next = clampMm(curMm() * Math.exp(-e.deltaY * unit * 0.0015));
+  if(next === curMm()) return;
+  const r = sheet.getBoundingClientRect();
+  const fx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  const fy = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+  setMm(next);
+  const r2 = sheet.getBoundingClientRect();
+  stage.scrollLeft += (r2.left + fx * r2.width) - e.clientX;
+  stage.scrollTop  += (r2.top  + fy * r2.height) - e.clientY;
+}, { passive:false });
+
+(function(){
+  const stage = $('stage'); let pan = null;
+  stage.addEventListener('mousedown', e => {
+    if(e.button !== 1 && e.button !== 2) return;   // 中鍵或右鍵拖曳平移
+    e.preventDefault();
+    pan = { x:e.clientX, y:e.clientY, sl:stage.scrollLeft, st:stage.scrollTop };
+    stage.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', e => {
+    if(!pan) return;
+    stage.scrollLeft = pan.sl - (e.clientX - pan.x);
+    stage.scrollTop  = pan.st - (e.clientY - pan.y);
+  });
+  window.addEventListener('mouseup', () => { if(pan){ pan = null; stage.style.cursor = ''; } });
+  stage.addEventListener('contextmenu', e => e.preventDefault());   // 右鍵拖曳時不跳出瀏覽器選單
+})();
+$('btnFit').addEventListener('click', fitView);
+window.addEventListener('resize', fitView);
+$('chkGrid').addEventListener('change', e => sheet.classList.toggle('grid', e.target.checked));
+$('chkNo').addEventListener('change', e => sheet.classList.toggle('hide-no', !e.target.checked));
+$('fitSel').addEventListener('change', e => { sheet.classList.remove('fit-contain','fit-cover'); sheet.classList.add('fit-' + e.target.value); renderCells(); });
+window.addEventListener('keydown', e => { if(e.key === 'Escape'){
+    if(selCells.size){ selCells.clear(); renderCells(); }
+    else if(selectedId){ selectedId = null; renderList(); }
+  } });
+
+/* ===== 規格選單 ===== */
+const specSel = $('specSel');
+Object.keys(SPECS).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = SPECS[k].label; specSel.appendChild(o); });
+specSel.addEventListener('change', () => {
+  if(cells.some(Boolean) && !confirm('切換標籤規格會清空目前畫布上的貼紙排佈，確定要切換嗎？')){ specSel.value = specKey; return; }
+  specKey = specSel.value; buildSheet();
+});
+
+/* ===== 列印（A4 直式，600dpi） ===== */
+const PRINT_DPI = 600;
+
+function drawFit(ctx, img, x, y, w, h, mode, align, scale){
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  const k = mode === 'cover' ? Math.max(w / iw, h / ih) : Math.min(w / iw, h / ih) * (scale || 100) / 100;
+  const dw = iw * k, dh = ih * k;
+  let dx = (w - dw) / 2;
+  if(mode === 'contain'){ if(align === 'left') dx = 0; else if(align === 'right') dx = w - dw; }
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.drawImage(img, x + dx, y + (h - dh) / 2, dw, dh);
+  ctx.restore();
+}
+
+/* 依目前排佈畫出整張 A4（210×297mm）的點陣圖 */
+function renderPage(dpi){
+  const pxPerMm = dpi / 25.4, s = spec();
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(PAGE.w * pxPerMm); cv.height = Math.round(PAGE.h * pxPerMm);
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.imageSmoothingQuality = 'high';
+  const mode = $('fitSel').value;
+  const counter = {};
+  cells.forEach((id, idx) => {
+    const it = id && findImg(id); if(!it) return;
+    const seq = counter[id] = (counter[id] || 0) + 1;
+    const c = idx % s.cols, r = Math.floor(idx / s.cols);
+    drawFit(ctx, it.img,
+      (s.offsetX + c * s.cellW) * pxPerMm, (s.offsetY + r * s.cellH) * pxPerMm,
+      s.cellW * pxPerMm, s.cellH * pxPerMm, mode, aligns[idx], scales[idx]);
+    if(it.num && it.num.on){                         // 編號：靠右、靠上，距格子右緣／上緣各留邊距
+      ctx.save();
+      ctx.fillStyle = '#000'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+      ctx.font = (it.num.size * PX * pxPerMm) + 'px ' + fontOf(it.num.font).css;
+      ctx.fillText(seqText(it, seq),
+        (s.offsetX + (c + 1) * s.cellW) * pxPerMm - it.num.right * PX * pxPerMm,
+        (s.offsetY + r * s.cellH) * pxPerMm + it.num.top * PX * pxPerMm);
+      ctx.restore();
+    }
+  });
+  return cv;
+}
+
+$('btnPrint').addEventListener('click', () => {
+  if(!cells.some(Boolean)){ toast('畫布上還沒有貼紙'); return; }
+  const host = $('printHost');
+  host.innerHTML = '';
+  try { host.appendChild(renderPage(PRINT_DPI)); }
+  catch(err){ toast('產生列印畫面失敗，請減少貼紙或重新整理後再試'); return; }
+  window.print();
+});
+window.addEventListener('afterprint', () => { $('printHost').innerHTML = ''; });
+
+/* ===== 初始化 ===== */
+buildSheet();
+renderList();
+fitView();
+</script>
+</body>
+</html>
